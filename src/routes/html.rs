@@ -427,7 +427,7 @@ pub async fn index(State(state): State<Arc<AppState>>, req: Request) -> HtmlRes 
     div class="flex-row gap-4 mb-0" {
       @if owners.len() > 1 {
         select name="owner" class="mb-0"
-          style="width: auto;"
+          style="width: auto; height: calc(1.5em + 0.5rem + 2px); padding: 0.25rem 2rem 0.25rem 0.5rem; background-position: center right 0.25rem; background-size: 0.75rem auto;"
           hx-get=(format!("/?sort={}&direction={}", qs.sort, qs.direction))
           hx-target="#repos_table"
           hx-swap="outerHTML"
@@ -443,6 +443,7 @@ pub async fn index(State(state): State<Arc<AppState>>, req: Request) -> HtmlRes 
       input type="search" name="q" value=(cur_q)
         placeholder="Search repos…"
         class="mb-0"
+        style="padding: 0.25rem 0.5rem 0.25rem 2.75rem; height: auto;"
         hx-get=(format!("/?sort={}&direction={}", qs.sort, qs.direction))
         hx-trigger="keyup changed delay:300ms, search"
         hx-target="#repos_table"
