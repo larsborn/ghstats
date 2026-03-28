@@ -349,6 +349,7 @@ pub async fn repo_page(
 pub async fn index(State(state): State<Arc<AppState>>, req: Request) -> HtmlRes {
   // let qs: Query<HashMap<String, String>> = Query::try_from_uri(req.uri())?;
   let qs: Query<RepoFilter> = Query::try_from_uri(req.uri())?;
+  let owners = state.get_owners().await?;
   let repos = state.get_repos_filtered(&qs).await?;
 
   let cols: Vec<(&str, Box<dyn Fn(&RepoTotals) -> Markup>, RepoSort)> = vec![
@@ -367,10 +368,24 @@ pub async fn index(State(state): State<Arc<AppState>>, req: Request) -> HtmlRes 
       false => "desc",
     };
 
-    format!("/?sort={}&direction={}", col, dir)
+    let mut url = format!("/?sort={}&direction={}", col, dir);
+    if let Some(q) = &qs.q {
+      if !q.is_empty() {
+        url.push_str(&format!("&q={}", q));
+      }
+    }
+    if let Some(owner) = &qs.owner {
+      if !owner.is_empty() {
+        url.push_str(&format!("&owner={}", owner));
+      }
+    }
+    url
   }
 
-  let html = html!(
+  let cur_q = qs.q.clone().unwrap_or_default();
+  let cur_owner = qs.owner.clone().unwrap_or_default();
+
+  let table_html = html!(
       table id="repos_table" {
         thead {
           tr {
@@ -404,9 +419,40 @@ pub async fn index(State(state): State<Arc<AppState>>, req: Request) -> HtmlRes 
   );
 
   match get_hx_target(&req) {
-    Some("repos_table") => return Ok(html),
+    Some("repos_table") => return Ok(table_html),
     _ => {}
   }
+
+  let html = html!(
+    div class="flex-row gap-4 mb-0" {
+      @if owners.len() > 1 {
+        select name="owner" class="mb-0"
+          style="width: auto;"
+          hx-get=(format!("/?sort={}&direction={}", qs.sort, qs.direction))
+          hx-target="#repos_table"
+          hx-swap="outerHTML"
+          hx-include="[name='q']"
+        {
+          option value="" selected[cur_owner.is_empty()] { "All owners" }
+          @for owner in &owners {
+            option value=(owner) selected[*owner == cur_owner] { (owner) }
+          }
+        }
+      }
+
+      input type="search" name="q" value=(cur_q)
+        placeholder="Search repos…"
+        class="mb-0"
+        hx-get=(format!("/?sort={}&direction={}", qs.sort, qs.direction))
+        hx-trigger="keyup changed delay:300ms, search"
+        hx-target="#repos_table"
+        hx-swap="outerHTML"
+        hx-include="[name='owner']"
+      {}
+    }
+
+    (table_html)
+  );
 
   Ok(base(&state, vec![], html))
 }
