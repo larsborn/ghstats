@@ -418,20 +418,28 @@ pub async fn index(State(state): State<Arc<AppState>>, req: Request) -> HtmlRes 
       }
   );
 
+  let sort_inputs = html!(
+    input type="hidden" id="filter_sort" name="sort" value=(qs.sort) hx-swap-oob="true" {}
+    input type="hidden" id="filter_direction" name="direction" value=(qs.direction) hx-swap-oob="true" {}
+  );
+
   match get_hx_target(&req) {
-    Some("repos_table") => return Ok(table_html),
+    Some("repos_table") => return Ok(html!((table_html) (sort_inputs))),
     _ => {}
   }
 
   let html = html!(
     div class="flex-row gap-4 mb-0" {
+      input type="hidden" id="filter_sort" name="sort" value=(qs.sort) {}
+      input type="hidden" id="filter_direction" name="direction" value=(qs.direction) {}
+
       @if owners.len() > 1 {
         select name="owner" class="mb-0"
           style="width: auto; height: calc(1.5em + 0.5rem + 2px); padding: 0.25rem 2rem 0.25rem 0.5rem; background-position: center right 0.25rem; background-size: 0.75rem auto;"
-          hx-get=(format!("/?sort={}&direction={}", qs.sort, qs.direction))
+          hx-get="/"
           hx-target="#repos_table"
           hx-swap="outerHTML"
-          hx-include="[name='q']"
+          hx-include="[name='q'], #filter_sort, #filter_direction"
         {
           option value="" selected[cur_owner.is_empty()] { "All owners" }
           @for owner in &owners {
@@ -444,11 +452,11 @@ pub async fn index(State(state): State<Arc<AppState>>, req: Request) -> HtmlRes 
         placeholder="Search repos…"
         class="mb-0"
         style="padding: 0.25rem 0.5rem 0.25rem 2.75rem; height: auto;"
-        hx-get=(format!("/?sort={}&direction={}", qs.sort, qs.direction))
+        hx-get="/"
         hx-trigger="keyup changed delay:300ms, search"
         hx-target="#repos_table"
         hx-swap="outerHTML"
-        hx-include="[name='owner']"
+        hx-include="[name='owner'], #filter_sort, #filter_direction"
       {}
     }
 
